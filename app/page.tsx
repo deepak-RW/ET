@@ -38,20 +38,27 @@ export default function Home() {
   const addTxMutation = useMutation(api.transactions.addTransaction);
   const deleteTxMutation = useMutation(api.transactions.deleteTransaction);
 
-  // Validation
-  const isEntryInvalid = !description.trim() || !amount || parseFloat(amount) <= 0;
-  const isTransferInvalid = !transferAmount || parseFloat(transferAmount) <= 0;
-
   const getBalance = (source: string) => {
     const initial = (profiles as any)?.[`${source}Balance`] || 0;
     const income = transactions
-      .filter(t => t.type === 'income' && t.source === source)
-      .reduce((acc, t) => acc + Number(t.amount || 0), 0);
+      .filter((t: any) => t.type === 'income' && (t.source || 'bank') === source)
+      .reduce((acc: number, t: any) => acc + Number(t.amount || 0), 0);
     const expense = transactions
-      .filter(t => t.type === 'expense' && t.source === source)
-      .reduce((acc, t) => acc + Number(t.amount || 0), 0);
-    return initial + income - expense;
+      .filter((t: any) => t.type === 'expense' && (t.source || 'bank') === source)
+      .reduce((acc: number, t: any) => acc + Number(t.amount || 0), 0);
+      
+    const finalBalance = initial + income - expense;
+    return isNaN(finalBalance) || finalBalance < 0 ? 0 : finalBalance;
   };
+
+  // Validation
+  const currentBalance = getBalance(accountSource);
+  const isExpenseExceeding = transactionType === 'expense' && amount !== '' && parseFloat(amount) > currentBalance;
+  const isEntryInvalid = !description.trim() || !amount || parseFloat(amount) <= 0 || isExpenseExceeding;
+
+  const cashAvailable = getBalance('cash');
+  const isTransferExceeding = transferAmount !== '' && parseFloat(transferAmount) > cashAvailable;
+  const isTransferInvalid = !transferAmount || parseFloat(transferAmount) <= 0 || isTransferExceeding;
 
   const handleAddTransaction = async () => {
     if (isEntryInvalid) return;
@@ -147,6 +154,7 @@ export default function Home() {
                 <input type="number" placeholder="₹ Amount" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} />
                 <button onClick={handleTransfer} className="transfer-btn" disabled={isTransferInvalid}>Send to Bank</button>
               </div>
+              {isTransferExceeding && <p style={{color: 'var(--expense)', fontSize: '0.8rem', marginTop: '8px', fontWeight: 600}}>Entered amount exceeds available balance.</p>}
             </div>
 
             <div className="card add-card">
@@ -162,8 +170,9 @@ export default function Home() {
               </div>
               <input type="text" placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
               <input type="number" placeholder="₹ Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              {isExpenseExceeding && <p style={{color: 'var(--expense)', fontSize: '0.8rem', marginTop: '-4px', marginBottom: '8px', fontWeight: 600}}>Entered amount exceeds available balance.</p>}
               <button className={`add-btn ${transactionType}`} onClick={handleAddTransaction} disabled={isEntryInvalid}>
-                {isEntryInvalid ? "Enter Details..." : `Confirm ${transactionType}`}
+                {isExpenseExceeding ? "Insufficient Balance" : isEntryInvalid ? "Enter Details..." : `Confirm ${transactionType}`}
               </button>
             </div>
           </div>
