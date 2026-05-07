@@ -20,6 +20,7 @@ export const addTransaction = mutation({
     description: v.string(),
     amount: v.number(),
     type: v.string(),
+    source: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -29,6 +30,7 @@ export const addTransaction = mutation({
       description: args.description,
       amount: args.amount,
       type: args.type,
+      source: args.source || "bank",
     });
   },
 });
@@ -50,6 +52,7 @@ export const editTransaction = mutation({
     description: v.string(),
     amount: v.number(),
     type: v.string(),
+    source: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -60,6 +63,7 @@ export const editTransaction = mutation({
       description: args.description,
       amount: args.amount,
       type: args.type,
+      source: args.source,
       updatedAt: new Date().toISOString(),
     });
   },
